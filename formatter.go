@@ -27,7 +27,7 @@ type GoogleCloudFunctionFormatter struct {
 type logEntry struct {
 	Message  string            `json:"message"`
 	Severity string            `json:"severity"`
-	Labels   map[string]string `json:"labels"`
+	Labels   map[string]string `json:"labels,omitempty"`
 }
 
 // New creates a new formatter.
