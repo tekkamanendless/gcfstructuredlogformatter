@@ -20,7 +20,7 @@ func CloudFunction(w http.ResponseWriter, r *http.Request) {
 	if value := os.Getenv("FUNCTION_TARGET"); value == "" {
 		log.Infof("FUNCTION_TARGET is not set; falling back to normal logging.")
 	} else {
-		formatter := gcfstructuredlogformatter.NewForRequest(r)
+		formatter := gcfstructuredlogformatter.New()
 
 		log.SetFormatter(formatter)
 	}
@@ -33,4 +33,3 @@ func CloudFunction(w http.ResponseWriter, r *http.Request) {
 }
 
 ```
-
