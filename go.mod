@@ -1,4 +1,4 @@
-module github.com/tekkamanendless/gcfstructuredloghook
+module github.com/tekkamanendless/gcfstructuredlogformatter
 
 go 1.14
 

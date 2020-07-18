@@ -1,7 +1,7 @@
-# gcfhook
-Google Cloud Function hook for [logrus](https://github.com/sirupsen/logrus).
+# gcfstructuredlogformatter
+Google Cloud Function formatter for [logrus](https://github.com/sirupsen/logrus).
 
-This provides a logrus hook to output logs in the ["structured logging"](https://cloud.google.com/logging/docs/structured-logging) format that Google Cloud Functions supports.
+This provides a logrus formatter to output logs in the ["structured logging"](https://cloud.google.com/logging/docs/structured-logging) format that Google Cloud Functions supports.
 As such, this does not require any special configuration, nor does it make network requests to write logs.
 
 ## Usage
@@ -20,10 +20,9 @@ func CloudFunction(w http.ResponseWriter, r *http.Request) {
 	if value := os.Getenv("FUNCTION_TARGET"); value == "" {
 		log.Infof("FUNCTION_TARGET is not set; falling back to normal logging.")
 	} else {
-		hook := gcfhook.NewForRequest(r)
+		formatter := gcfstructuredlogformatter.NewForRequest(r)
 
-		// Add the hook.
-		log.AddHook(hook)
+		log.SetFormatter(formatter)
 	}
 
 	log.Infof("This is an info message.")

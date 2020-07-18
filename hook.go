@@ -1,6 +1,7 @@
-package gcfhook
+package gcfstructuredlogformatter
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 
@@ -19,8 +20,8 @@ var logrusToGoogleSeverityMap = map[logrus.Level]logging.Severity{
 	logrus.TraceLevel: logging.Default,
 }
 
-// GoogleCloudFunctionHook is the logrus hook.
-type GoogleCloudFunctionHook struct {
+// GoogleCloudFunctionFormatter is the logrus formatter.
+type GoogleCloudFunctionFormatter struct {
 	ExecutionID  string            // This is the execution ID, as found in the HTTP header `Function-Execution-Id`.
 	FunctionName string            // This is the function name, as found in the `FUNCTION_NAME` environment variable.
 	Labels       map[string]string // This is an optional map of additional "labels".
@@ -33,28 +34,28 @@ type logEntry struct {
 	labels   map[string]string `json:"labels"`
 }
 
-// New creates a new hook.
-func New() *GoogleCloudFunctionHook {
-	hook := &GoogleCloudFunctionHook{
+// New creates a new formatter.
+func New() *GoogleCloudFunctionFormatter {
+	f := &GoogleCloudFunctionFormatter{
 		FunctionName: os.Getenv("FUNCTION_NAME"),
 		Labels:       map[string]string{},
 	}
-	return hook
+	return f
 }
 
-// NewForRequest creates a new hook that will include the "execution ID" of the request
+// NewForRequest creates a new formatter that will include the "execution ID" of the request
 // as a label with each log message.
-func NewForRequest(r *http.Request) *GoogleCloudFunctionHook {
-	hook := New()
+func NewForRequest(r *http.Request) *GoogleCloudFunctionFormatter {
+	f := New()
 
 	// If we can get the execution ID, then use it when we fire the log messages.
-	hook.ExecutionID = r.Header.Get("Function-Execution-Id")
+	f.ExecutionID = r.Header.Get("Function-Execution-Id")
 
-	return hook
+	return f
 }
 
 // Levels are the available logging levels.
-func (hook *GoogleCloudFunctionHook) Levels() []logrus.Level {
+func (f *GoogleCloudFunctionFormatter) Levels() []logrus.Level {
 	return []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
@@ -67,7 +68,7 @@ func (hook *GoogleCloudFunctionHook) Levels() []logrus.Level {
 }
 
 // Fire sends an entry.
-func (hook *GoogleCloudFunctionHook) Fire(entry *logrus.Entry) error {
+func (f *GoogleCloudFunctionFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	severity := logging.Default
 	if value, okay := logrusToGoogleSeverityMap[entry.Level]; okay {
 		severity = value
@@ -78,15 +79,16 @@ func (hook *GoogleCloudFunctionHook) Fire(entry *logrus.Entry) error {
 		severity: severity.String(),
 		labels:   map[string]string{},
 	}
-	for key, value := range hook.Labels {
+	for key, value := range f.Labels {
 		newEntry.labels[key] = value
 	}
-	if hook.ExecutionID != "" {
-		newEntry.labels["execution_id"] = hook.ExecutionID
+	if f.ExecutionID != "" {
+		newEntry.labels["execution_id"] = f.ExecutionID
 	}
-	if hook.FunctionName != "" {
-		newEntry.labels["function_name"] = hook.FunctionName
+	if f.FunctionName != "" {
+		newEntry.labels["function_name"] = f.FunctionName
 	}
 
-	return nil
+	return json.Marshal(newEntry)
 }
+
