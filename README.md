@@ -4,6 +4,8 @@ Google Cloud Function formatter for [logrus](https://github.com/sirupsen/logrus)
 This provides a logrus formatter to output logs in the ["structured logging"](https://cloud.google.com/logging/docs/structured-logging) format that Google Cloud Functions supports.
 As such, this does not require any special configuration, nor does it make network requests to write logs.
 
+From what I can tell, the format is the same as the Cloud Run ["special fields"](https://cloud.google.com/logging/docs/agent/configuration#special-fields).
+
 ## Usage
 This example shows how to set up logrus for Google Cloud Functions.
 If the function is running locally (for development, etc.), then it will not use the hook.

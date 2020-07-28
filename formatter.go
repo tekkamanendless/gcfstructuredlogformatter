@@ -18,8 +18,8 @@ var logrusToGoogleSeverityMap = map[logrus.Level]logging.Severity{
 	logrus.TraceLevel: logging.Default,
 }
 
-// GoogleCloudFunctionFormatter is the logrus formatter.
-type GoogleCloudFunctionFormatter struct {
+// Formatter is the logrus formatter.
+type Formatter struct {
 	Labels map[string]string // This is an optional map of additional "labels".
 }
 
@@ -31,15 +31,15 @@ type logEntry struct {
 }
 
 // New creates a new formatter.
-func New() *GoogleCloudFunctionFormatter {
-	f := &GoogleCloudFunctionFormatter{
+func New() *Formatter {
+	f := &Formatter{
 		Labels: map[string]string{},
 	}
 	return f
 }
 
 // Levels are the available logging levels.
-func (f *GoogleCloudFunctionFormatter) Levels() []logrus.Level {
+func (f *Formatter) Levels() []logrus.Level {
 	return []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
@@ -51,8 +51,8 @@ func (f *GoogleCloudFunctionFormatter) Levels() []logrus.Level {
 	}
 }
 
-// Fire sends an entry.
-func (f *GoogleCloudFunctionFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+// Format an entry.
+func (f *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
 	severity := logging.Default
 	if value, okay := logrusToGoogleSeverityMap[entry.Level]; okay {
 		severity = value
