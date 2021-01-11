@@ -7,6 +7,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ContextKey is the type for the context key.
+// The Go docs recommend not using any built-in type for context keys in order
+// to ensure that there are no collisions:
+//    https://golang.org/pkg/context/#WithValue
+type ContextKey string
+
+// ContextKey constants.
+const (
+	ContextKeyTrace ContextKey = "trace" // This is the key for the trace identifier.
+)
+
 // logrusToGoogleSeverityMap maps a logrus level to a Google severity.
 var logrusToGoogleSeverityMap = map[logrus.Level]logging.Severity{
 	logrus.PanicLevel: logging.Emergency,
@@ -26,7 +37,8 @@ type Formatter struct {
 // logEntry is an abbreviated version of the Google "structured logging" data structure.
 type logEntry struct {
 	Message  string            `json:"message"`
-	Severity string            `json:"severity"`
+	Severity string            `json:"severity,omitempty"`
+	Trace    string            `json:"logging.googleapis.com/trace,omitempty"`
 	Labels   map[string]string `json:"labels,omitempty"`
 }
 
@@ -62,6 +74,11 @@ func (f *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
 		Message:  entry.Message,
 		Severity: severity.String(),
 		Labels:   map[string]string{},
+	}
+	if entry.Context != nil {
+		if v, okay := entry.Context.Value(ContextKeyTrace).(string); okay {
+			newEntry.Trace = v
+		}
 	}
 	for key, value := range f.Labels {
 		newEntry.Labels[key] = value
