@@ -5,17 +5,21 @@ import (
 
 	"cloud.google.com/go/logging"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/trace"
 )
 
-// ContextKey is the type for the context key.
-// The Go docs recommend not using any built-in type for context keys in order
-// to ensure that there are no collisions:
-//    https://golang.org/pkg/context/#WithValue
-type ContextKey string
-
-// ContextKey constants.
+// Keys defined https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry
 const (
-	ContextKeyTrace ContextKey = "trace" // This is the key for the trace identifier.
+	// TraceKey is the key for the trace identifier.
+	TraceKey = "logging.googleapis.com/trace"
+	// SpanKey is the key for the span identifier.
+	SpanKey = "logging.googleapis.com/spanId"
+	// SeverityKey is the key for the severity.
+	SeverityKey = "severity"
+	// MessageKey is the key for the message.
+	MessageKey = "message"
+	// LabelsKey is the key for the labels.
+	LabelsKey = "logging.googleapis.com/labels"
 )
 
 // logrusToGoogleSeverityMap maps a logrus level to a Google severity.
@@ -34,20 +38,17 @@ type Formatter struct {
 	Labels map[string]string // This is an optional map of additional "labels".
 }
 
-// logEntry is an abbreviated version of the Google "structured logging" data structure.
-type logEntry struct {
-	Message  string            `json:"message"`
-	Severity string            `json:"severity,omitempty"`
-	Trace    string            `json:"logging.googleapis.com/trace,omitempty"`
-	Labels   map[string]string `json:"labels,omitempty"`
-}
-
 // New creates a new formatter.
 func New() *Formatter {
 	f := &Formatter{
 		Labels: map[string]string{},
 	}
 	return f
+}
+
+// AddLabel adds a label to the formatter.
+func (f *Formatter) AddLabel(key, value string) {
+	f.Labels[key] = value
 }
 
 // Levels are the available logging levels.
@@ -70,21 +71,31 @@ func (f *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
 		severity = value
 	}
 
-	newEntry := logEntry{
-		Message:  entry.Message,
-		Severity: severity.String(),
-		Labels:   map[string]string{},
-	}
+	mapEntry := map[string]interface{}{}
+	mapEntry[SeverityKey] = severity.String()
+	mapEntry[MessageKey] = entry.Message
+
 	if entry.Context != nil {
-		if v, okay := entry.Context.Value(ContextKeyTrace).(string); okay {
-			newEntry.Trace = v
+		// try to get the trace id from the context
+		span := trace.SpanFromContext(entry.Context)
+		spanContext := span.SpanContext()
+		if spanContext.IsValid() {
+			mapEntry[TraceKey] = spanContext.TraceID().String()
+			mapEntry[SpanKey] = spanContext.SpanID().String()
 		}
 	}
-	for key, value := range f.Labels {
-		newEntry.Labels[key] = value
+	if len(f.Labels) > 0 {
+		labels := map[string]string{}
+		for key, value := range f.Labels {
+			labels[key] = value
+		}
+		mapEntry[LabelsKey] = labels
 	}
 
-	contents, err := json.Marshal(newEntry)
+	for key, value := range entry.Data {
+		mapEntry[key] = value
+	}
+	contents, err := json.Marshal(mapEntry)
 	if err != nil {
 		return nil, err
 	}
