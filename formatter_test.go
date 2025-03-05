@@ -23,7 +23,9 @@ func TestLogEntry(t *testing.T) {
 		{
 			description: "All fields",
 			input: logEntry{
-				Message:  "my-message",
+				JSONPayload: map[string]any{
+					"message": "my-message",
+				},
 				Severity: "my-severity",
 				Trace:    "my-trace",
 				Labels: map[string]string{
@@ -59,6 +61,9 @@ func TestFormat(t *testing.T) {
 			description: "Empty",
 			input:       logrus.NewEntry(logger),
 			output: logEntry{
+				JSONPayload: map[string]any{
+					"message": "",
+				},
 				Severity: "Emergency", // logrus's 0th level is PanicLevel.
 			},
 		},
@@ -68,10 +73,13 @@ func TestFormat(t *testing.T) {
 				e := logrus.NewEntry(logger)
 				e.Message = "test"
 				e.Level = logrus.InfoLevel
+
 				return e
 			}(),
 			output: logEntry{
-				Message:  "test",
+				JSONPayload: map[string]any{
+					"message": "test",
+				},
 				Severity: "Info",
 			},
 		},
@@ -81,10 +89,13 @@ func TestFormat(t *testing.T) {
 				e := logrus.NewEntry(logger)
 				e.Message = "test"
 				e.Level = logrus.WarnLevel
+
 				return e
 			}(),
 			output: logEntry{
-				Message:  "test",
+				JSONPayload: map[string]any{
+					"message": "test",
+				},
 				Severity: "Warning",
 			},
 		},
@@ -95,10 +106,13 @@ func TestFormat(t *testing.T) {
 				e := logrus.NewEntry(logger).WithContext(ctx)
 				e.Message = "test"
 				e.Level = logrus.InfoLevel
+
 				return e
 			}(),
 			output: logEntry{
-				Message:  "test",
+				JSONPayload: map[string]any{
+					"message": "test",
+				},
 				Severity: "Info",
 				Trace:    "trace-1",
 			},
@@ -110,10 +124,40 @@ func TestFormat(t *testing.T) {
 				e := logrus.NewEntry(logger).WithContext(ctx)
 				e.Message = "test"
 				e.Level = logrus.InfoLevel
+
 				return e
 			}(),
 			output: logEntry{
-				Message:  "test",
+				JSONPayload: map[string]any{
+					"message": "test",
+				},
+				Severity: "Info",
+			},
+		},
+		{
+			description: "With logrus fields",
+			input: func() *logrus.Entry {
+				e := logrus.NewEntry(logger).
+					WithFields(logrus.Fields{
+						"key-1": "value-1",
+						"nested": logrus.Fields{
+							"key-2": "value-2",
+						},
+					})
+
+				e.Message = "test"
+				e.Level = logrus.InfoLevel
+
+				return e
+			}(),
+			output: logEntry{
+				JSONPayload: map[string]any{
+					"message": "test",
+					"key-1":   "value-1",
+					"nested": map[string]any{
+						"key-2": "value-2",
+					},
+				},
 				Severity: "Info",
 			},
 		},
