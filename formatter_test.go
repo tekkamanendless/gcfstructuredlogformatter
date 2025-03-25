@@ -23,12 +23,10 @@ func TestLogEntry(t *testing.T) {
 		{
 			description: "All fields",
 			input: logEntry{
-				JSONPayload: map[string]any{
-					"message": "my-message",
-				},
-				Severity: "my-severity",
-				Trace:    "my-trace",
-				Labels: map[string]string{
+				"message":                      "my-message",
+				"severity":                     "my-severity",
+				"logging.googleapis.com/trace": "my-trace",
+				"labels": map[string]any{
 					"label-1": "value-1",
 					"label-2": "value-2",
 				},
@@ -61,10 +59,8 @@ func TestFormat(t *testing.T) {
 			description: "Empty",
 			input:       logrus.NewEntry(logger),
 			output: logEntry{
-				JSONPayload: map[string]any{
-					"message": "",
-				},
-				Severity: "Emergency", // logrus's 0th level is PanicLevel.
+				"message":  "",
+				"severity": "Emergency", // logrus's 0th level is PanicLevel.
 			},
 		},
 		{
@@ -77,10 +73,8 @@ func TestFormat(t *testing.T) {
 				return e
 			}(),
 			output: logEntry{
-				JSONPayload: map[string]any{
-					"message": "test",
-				},
-				Severity: "Info",
+				"message":  "test",
+				"severity": "Info",
 			},
 		},
 		{
@@ -93,10 +87,8 @@ func TestFormat(t *testing.T) {
 				return e
 			}(),
 			output: logEntry{
-				JSONPayload: map[string]any{
-					"message": "test",
-				},
-				Severity: "Warning",
+				"message":  "test",
+				"severity": "Warning",
 			},
 		},
 		{
@@ -110,11 +102,9 @@ func TestFormat(t *testing.T) {
 				return e
 			}(),
 			output: logEntry{
-				JSONPayload: map[string]any{
-					"message": "test",
-				},
-				Severity: "Info",
-				Trace:    "trace-1",
+				"message":                      "test",
+				"severity":                     "Info",
+				"logging.googleapis.com/trace": "trace-1",
 			},
 		},
 		{
@@ -128,10 +118,8 @@ func TestFormat(t *testing.T) {
 				return e
 			}(),
 			output: logEntry{
-				JSONPayload: map[string]any{
-					"message": "test",
-				},
-				Severity: "Info",
+				"message":  "test",
+				"severity": "Info",
 			},
 		},
 		{
@@ -151,14 +139,12 @@ func TestFormat(t *testing.T) {
 				return e
 			}(),
 			output: logEntry{
-				JSONPayload: map[string]any{
-					"message": "test",
-					"key-1":   "value-1",
-					"nested": map[string]any{
-						"key-2": "value-2",
-					},
+				"message": "test",
+				"key-1":   "value-1",
+				"nested": map[string]any{
+					"key-2": "value-2",
 				},
-				Severity: "Info",
+				"severity": "Info",
 			},
 		},
 	}
