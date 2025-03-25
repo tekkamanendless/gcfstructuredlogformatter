@@ -2,6 +2,7 @@ package gcfstructuredlogformatter
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"cloud.google.com/go/logging"
 	"github.com/sirupsen/logrus"
@@ -14,10 +15,8 @@ import (
 //	https://golang.org/pkg/context/#WithValue
 type ContextKey string
 
-// ContextKey constants.
-const (
-	ContextKeyTrace ContextKey = "trace" // This is the key for the trace identifier.
-)
+// ContextKeyTrace defines the key for the trace identifier.
+const ContextKeyTrace ContextKey = "trace"
 
 // logrusToGoogleSeverityMap maps a logrus level to a Google severity.
 var logrusToGoogleSeverityMap = map[logrus.Level]logging.Severity{
@@ -35,13 +34,15 @@ type Formatter struct {
 	Labels map[string]string // This is an optional map of additional "labels".
 }
 
-// logEntry is an abbreviated version of the Google "structured logging" data structure.
-type logEntry struct {
-	JSONPayload map[string]any    `json:"jsonPayload"`
-	Severity    string            `json:"severity,omitempty"`
-	Trace       string            `json:"logging.googleapis.com/trace,omitempty"`
-	Labels      map[string]string `json:"labels,omitempty"`
-}
+type logEntry = map[string]any
+
+// Define log entry field keys used for JSON marshaling.
+const (
+	fieldKeySeverity = "severity"
+	fieldKeyTrace    = "logging.googleapis.com/trace"
+	fieldKeyLabels   = "labels"
+	fieldKeyMessage  = "message"
+)
 
 // New creates a new formatter.
 func New() *Formatter {
@@ -71,32 +72,29 @@ func (f *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
 		severity = value
 	}
 
-	newEntry := logEntry{
-		JSONPayload: entry.Data,
-		Severity:    severity.String(),
-		Labels:      map[string]string{},
+	newEntry := logEntry{}
+
+	for key, value := range entry.Data {
+		newEntry[key] = value
 	}
 
-	if newEntry.JSONPayload == nil {
-		newEntry.JSONPayload = map[string]any{}
-	}
-
-	newEntry.JSONPayload["message"] = entry.Message
+	newEntry[fieldKeySeverity] = severity.String()
+	newEntry[fieldKeyMessage] = entry.Message
 
 	if entry.Context != nil {
 		if v, okay := entry.Context.Value(ContextKeyTrace).(string); okay {
-			newEntry.Trace = v
+			newEntry[fieldKeyTrace] = v
 		}
 	}
 
-	for key, value := range f.Labels {
-		newEntry.Labels[key] = value
+	if len(f.Labels) > 0 {
+		newEntry[fieldKeyLabels] = f.Labels
 	}
 
-	contents, err := json.Marshal(newEntry)
+	rawJSON, err := json.Marshal(newEntry)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal log entry to JSON: %w", err)
 	}
 
-	return append(contents, []byte("\n")...), nil
+	return append(rawJSON, []byte("\n")...), nil
 }
